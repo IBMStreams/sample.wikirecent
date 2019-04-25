@@ -104,4 +104,6 @@ venv.bak/
 .mypy_cache/
 /Juypter/shared/creds/
 .idea/
+credential.py
+
 

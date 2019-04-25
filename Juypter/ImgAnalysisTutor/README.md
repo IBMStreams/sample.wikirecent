@@ -50,6 +50,14 @@ Access the wiki data with the benifit of streams.
 - Run images extracted in WikieRecent3 through the  Facial Emotion Classifier model-
 - Live view of images emotion classificaion.
 
+## imgAna_5_workbook
+
+Working through adding the face location in order to send only good candidate croped images
+to the Facial Emotion Classifier. The notbook illustrates how to build a function locally that
+when debugged is then pushed up to the server. 
+
+As is with much of the processing more coding effort is expended in the UI on the client than 
+on the server.
 
 
 ### WikiRecentExploreV2 notes
