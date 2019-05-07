@@ -29,7 +29,6 @@ The emotions are rendered as pie chart here, when an emotion analysis does not r
 
 ### work in process
 - Notebooks are functional to me (Cloud & ICP4D) make them consumable for ICP4D.
-- Progression is of understanding the data and building analysics 
 - At this moment the goal is to have each notebook be standalone, all components to within the notebook. This may not be practical since notebook use
 a significant portion of the previous notebook. 
 

@@ -37,7 +37,7 @@ Access the wiki data with the benifit of streams.
 - Live view of top submitters, top articles and active languages in a 'dashboard'
 
 ## imgAna_3
-![](images/phase3.gif)
+![](images/stillPhase3.gif)
 
 - All functionality of WikiRecent2
 - Ananlyse wiki update for image link
@@ -45,33 +45,10 @@ Access the wiki data with the benifit of streams.
 - Live view of images submitted to wiki.
 
 ## imgAna_4
-![](images/phase4.gif)
+![](images/stillPhase4.gif)
 - All functionality of WikiRecent3
-- Run images extracted in WikieRecent3 through the  Facial Emotion Classifier model-
-- Live view of images emotion classificaion.
-
-## imgAna_5_workbook
-
-Working through adding the face location in order to send only good candidate croped images
-to the Facial Emotion Classifier. The notbook illustrates how to build a function locally that
-when debugged is then pushed up to the server. 
-
-As is with much of the processing more coding effort is expended in the UI on the client than 
-on the server.
-
-
-### WikiRecentExploreV2 notes
-This is invoking the streams tookit operator. 
-```python
-agg = op.Map('spl.relational::Aggregate', win, schema='tuple<int64 oldSum, int64 newSum, int64 deltaSum>',name="aggregateHumanEdits")
-```
-Which is not the same as this [aggregate](http://ibmstreams.github.io/streamsx.topology/doc/pythondoc/streamsx.topology.topology.html#streamsx.topology.topology.Window.aggregate), where it's window + operator.
-
-The window is setup with *topology.last().trigger()* followed by the aggregate that gets the window (multiple objects)
-and returns one object.  If you want to return mulitple objects, return 1 iterable object and use the *flat_map()*.
-
-Switched over to python version of aggregate created
- - sumAggregate()
- - tally_fields()
+- Run images extracted in WikieRecent3 through the Facial Recognizer model and derive cropped facial image.
+- Run cropped facial images through the Facial Emotion Classifier to generate a score.
+- Live view of the orignal images, cropped images
 
 
