@@ -37,7 +37,7 @@ Access the wiki data with the benifit of streams.
 - Live view of top submitters, top articles and active languages in a 'dashboard'
 
 ## imgAna_3
-![](images/stillPhase3.gif)
+![](images/stillPhase3.jpg)
 
 - All functionality of WikiRecent2
 - Ananlyse wiki update for image link
@@ -45,7 +45,8 @@ Access the wiki data with the benifit of streams.
 - Live view of images submitted to wiki.
 
 ## imgAna_4
-![](images/stillPhase4.gif)
+![](images/stillPhase4.jpg)
+
 - All functionality of WikiRecent3
 - Run images extracted in WikieRecent3 through the Facial Recognizer model and derive cropped facial image.
 - Run cropped facial images through the Facial Emotion Classifier to generate a score.

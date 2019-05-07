@@ -15,7 +15,7 @@ Refer to Juypter/imgAna_2 notebook for details.
 
 Example of integrating the ['Facial Recognizer'](https://developer.ibm.com/exchanges/models/all/max-facial-recognizer/) into the Streams application . The Streams 
 application is extracting the images submitted to Wikipedia, in this case someone submitted a classic movie poster. The image was run through the 'Facial Emotion Classfier'
-and results rendered in a notebook where this still was captured. Refer to Juypter/imgAna_5_workbook() notebook for details.
+and results rendered in a notebook where this still was captured. Refer to Juypter/imgAna_4_workbook() notebook for details.
 
 ![](facialLocation.jpg)
 
