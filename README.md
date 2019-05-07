@@ -23,10 +23,9 @@ Example of using ['Facial Recognizer'](https://developer.ibm.com/exchanges/model
 in conjuntion with ['Facial Emotion Classifier'](https://developer.ibm.com/exchanges/models/all/max-facial-emotion-classifier/). The Streams
 application extracts faces from images submitted to Wikipedia via the 'Facial Recognizer'. Streams pushes the face images to the 'Factial Emotion Classifier' 
 for analysis, the results of which are rendered in a notebook where this still was captured. Refer to Juypter/imgAna5 notebook for details.
-The emotions are rendered as pie chart here, when an emotion analysis does not return score the color of he piechart is displayed. 
+The emotions are rendered as pie chart here, when an emotion analysis does not return score the scale is displayed. 
 
 ![](imgClassify.jpg)
-
 
 ### work in process
 - Notebooks are functional to me (Cloud & ICP4D) make them consumable for ICP4D.
