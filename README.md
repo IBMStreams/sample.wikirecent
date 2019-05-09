@@ -1,3 +1,4 @@
+To get started, enter the Notebooks section and open the README notebook 
 # sample.wikirecent
 Examples and tutorials of live processing of Wikipedia recent updates feed.
 
