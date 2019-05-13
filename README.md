@@ -1,21 +1,23 @@
 To get started, enter the Notebooks section and open the README notebook 
 # sample.wikirecent
-## Tutorials of live processing of Wikipedia recent updates feed using ICP4D. 
-
-### Wikipedia provides a realtime feed of recent updates to it's content. 
-#### These tutorials demonstrate processing this live data using ICP4D, processing the data in the following phases:
-
-
-- Separate 'robot' updates from human updates.
-- extract updates with pertaining to images
-- analyse extracted images for faces, extract cropped faces
+## Tutorials : live Wikipedia processing using Streams on ICP4D
+### Wiki submitted images extracted for facial and emotion analysis using deep learning models.
+Processing phases :
+- connect to SSE feed for realtime Wikipedia updates
+- drop 'robot' updates
+- extract updates pertaining to images
+- locate faces within image using facial analysis then crop
 - score cropped images using emotional analysis   
 
-Resulting in realtime categorization of content submitted to Wikiepedia rendered in Juypter notebooks 
-as illustrated by:
+Resulting in realtime categorization of content submitted to Wikiepedia, rendered in Juypter notebooks 
+as illustrated below: 
 ![](icpWiki4.gif)
 
-This repository contains examples and tutorials of live processing using this feed.
+In the example above the top photo was submitted to Wikipeida, on which a 'Facial Recognizer' located face(s), the UI inscribed a bounding.
+The next row shows confidence level of the located faces, face percentage of the original image, followed by the cropped face. Finlly a pie chart
+that is rendering the results of the 'Facial Emotion Classifier' scoring. 
+
+In the case that no faces were located the subsequent processing is skipped.
 
 
 ## Juypter Notebooks extracts - details
@@ -42,10 +44,13 @@ The emotions are rendered as pie chart here, when an emotion analysis does not r
 
 ![](imgClassify.jpg)
 
-### Notes
-- Notebooks are functional (Cloud & ICP4D) make them consumable for ICP4D.
-- At this moment the goal is to have each notebook be standalone, all components to within the notebook. This may not be practical since notebook use
-a significant portion of the previous notebook. 
+### Getting started in ICP4D.
+- Verify that you have 'Streams' add-on enabled. 
+- Create a new 'Analytics project', from this Git repository. 
+- Procede to the imgAna_1 notebook to walk through composing, building and submitting a Streams application in ICP4D.
 
- Below is a capture of Streams application graph executing imgAna_4, numbers attached to connectors indicate message flow in the last seconds.
+### Notes
+- Notebooks are functional on ICP4D and Cloud.
+- Below is a capture of Streams application graph executing imgAna_4, numbers attached to connectors indicate message flow in the last seconds.
+
 ![](wikirecentFlow.gif)
