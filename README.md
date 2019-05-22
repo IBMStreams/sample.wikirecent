@@ -47,7 +47,9 @@ The emotions are rendered as pie chart here, when an emotion analysis does not r
 ### Getting started in ICP4D.
 - Verify that you have 'Streams' add-on enabled. 
 - Create a new 'Analytics project', from this Git repository. 
-- Procede to the imgAna_1 notebook to walk through composing, building and submitting a Streams application in ICP4D.
+- Proceed to the imgAna_1 notebook to walk through composing, building and submitting a Streams application in ICP4D.
+- Alternate: Jump to the end to whet your appetite,  run the imgAna_Finale notebook to see live streaming analysis of Wiki data.
+
 
 ### Notes
 - Notebooks are functional on ICP4D and Cloud.
