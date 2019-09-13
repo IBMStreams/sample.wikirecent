@@ -6,7 +6,7 @@ from urllib.parse import urlparse
 
 import requests
 import streamsx.rest as rest
-from PIL import Image
+#from PIL import Image
 from bs4 import BeautifulSoup
 from sseclient import SSEClient as EventSource
 from streamsx.topology import context
