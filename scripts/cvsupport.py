@@ -4,6 +4,8 @@ from streamsx.topology.topology import *
 import streamsx
 import io
 import base64
+
+import cv2
 from cv2 import IMREAD_COLOR
 from cv2 import COLOR_BGR2RGB
 from cv2 import CascadeClassifier
@@ -110,3 +112,86 @@ class FaceRegions:
             return None
         _tuple['face_regions'] = face_rects.tolist()
         return _tuple
+
+class ObjectRegions:
+
+
+    def __init__(self, classes="None", weights="/etc/yolov3.weights", config="/etc/yolov3.cfg", on_streams=True):
+        """Locate objects(s) in and image, item and location.
+        :param classes: classes of objects, loaded locally
+        :param weights:
+        :param config:
+        :param on_streams : function is to be invoked within streams application
+        """
+        with open(classes, 'r') as f:
+            self.classes = [line.strip() for line in f.readlines()]
+        self.weights = weights
+        self.config = config
+        self.COLORS = np.random.uniform(0, 255, size=(len(self.classes), 3))
+        self.scale = 0.00392
+        self.conf_threshold = 0.8
+        self.nms_threshold = 0.4
+        self.on_streams = on_streams
+
+    def __enter__(self):
+        if self.on_streams:
+            self.weights = streamsx.ec.get_application_directory() + self.weights
+            self.config = streamsx.ec.get_application_directory() + self.config
+        self.net = cv2.dnn.readNet(self.weights, self.config)
+        return self
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        logging.getLogger(__name__).error("*EXIT invoked type:{} value:{}".format(exception_type, exception_value))
+        True
+
+    def bts_to_img(self, bts):
+        buff = np.fromstring(bts, np.uint8)
+        buff = buff.reshape(1, -1)
+        img = imdecode(buff, IMREAD_COLOR)
+        return img
+
+    def convertToRGB(self, image):
+        return cvtColor(image, COLOR_BGR2RGB)
+
+    def __call__(self, _tuple):
+        """"
+        Note:
+            - output results must be json compliant
+
+        """
+        bio = io.BytesIO(base64.b64decode(_tuple['img_string']))
+        img_raw = self.bts_to_img(bio.read())
+        #def yolo_detect(frame,conf_threshold):
+        blob = cv2.dnn.blobFromImage(img_raw, self.scale, (416,416), (0,0,0), True, crop=False)
+        self.net.setInput(blob)
+        layer_names = self.net.getLayerNames()
+        output_layers = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
+        outs = self.net.forward(output_layers)
+
+        class_ids = []
+        confidences = []
+        boxes = []
+
+        for out in outs:
+            for detection in out:
+                scores = detection[5:]
+                class_id = np.argmax(scores)
+                confidence = scores[class_id]
+                if confidence > self.conf_threshold:
+                    final_h, final_w = img_raw.shape[:2]
+                    box = detection[0:4] * np.array([final_w, final_h, final_w, final_h])
+                    (centerX, centerY, newWidth, newHeight) = box.astype("int")
+                    x = centerX - newWidth / 2
+                    y = centerY - newHeight / 2
+                    class_ids.append(class_id)
+                    confidences.append(float(confidence))
+                    boxes.append([float(x), float(y), float(newWidth), float(newHeight)])
+
+        if len(class_ids) == 0:
+            return None
+        regions = [{"class":self.classes[class_ids[idx]], "confidence":confidences[idx],"region":boxes[idx] } for idx in range(len(class_ids))]
+        _tuple['object_regions'] = regions
+        return(_tuple)
+
+
+

@@ -105,5 +105,6 @@ venv.bak/
 /Juypter/shared/creds/
 .idea/
 credential.py
+/datasets/yolov3.weights
 
 

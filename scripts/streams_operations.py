@@ -13,7 +13,7 @@ from streamsx.topology import context
 from streamsx.topology.topology import *
 
 
-def get_instance():
+def get_instance(service_name="Steaming3Turbine"):
     """Setup to access your Streams instance.
 
     ..note::The notebook is work within Cloud and ICP4D.
