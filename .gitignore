@@ -108,3 +108,5 @@ credential.py
 /datasets/yolov3.weights
 
 
+/datasets/yolov3.cfg
+/datasets/yolov3.txt
