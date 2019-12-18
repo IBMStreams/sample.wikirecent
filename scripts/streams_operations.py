@@ -3,7 +3,7 @@ import collections
 import csv
 import io
 from urllib.parse import urlparse
-
+import json
 import requests
 import streamsx.rest as rest
 #from PIL import Image

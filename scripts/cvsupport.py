@@ -11,6 +11,8 @@ from cv2 import COLOR_BGR2RGB
 from cv2 import CascadeClassifier
 from cv2 import imdecode
 from cv2 import cvtColor
+from PIL import Image
+
 import logging
 
 """
@@ -20,24 +22,26 @@ import logging
 
 logging.getLogger("cvsupport")
 
+
 class ImageFetch:
     """
     Fetch image using URL of tuple..
     """
+
     def __init__(self):
         """ Fetch image .
 
         Notes:
 
-            * decode_img(tuple.img_string) # to return encoded string as an image.
+            * decode_img(tuple.image_string) # to return encoded string as an image.
         ```
         """
         pass
 
     def __exit__(self, exception_type, exception_value, traceback):
         logging.getLogger(__name__).error("*EXIT invoked type:{} value:{}".format(exception_type, exception_value))
-        True
-    
+        return True  # do not re-raise the exception.
+
     def __call__(self, _tuple):
         """ The processing
 
@@ -45,7 +49,7 @@ class ImageFetch:
             _tuple: field 'img_desc'][0]['img'] has image url to be fetched
 
         Returns:
-            'img_string', image encoded as a string added to _tuple, None on failure
+            'image_string', image encoded as a string added to _tuple, None on failure
         """
 
         img_url = _tuple['img_desc'][0]['img']
@@ -53,14 +57,16 @@ class ImageFetch:
         if not response.ok:
             logging.getLogger(__name__).warning("Error {} on url:{}".format(response, img_url))
             return None
-        _tuple['img_string'] = str(base64.b64encode(response.content).decode("utf-8"))
+        _tuple['source'] = 'img_url'
+        _tuple['image_string'] = str(base64.b64encode(response.content).decode("utf-8"))
         return _tuple
 
 
 class FaceRegions:
-    """ Find faces in image using img_string of tuple.
+    """ Find faces in image using image_string of tuple.
 
     """
+
     def __init__(self, haar_file=None):
         self.haar_cascade_face = None
         self.haar_file = haar_file
@@ -71,25 +77,25 @@ class FaceRegions:
         if self.haar_cascade_face is None:
             self.haar_cascade_face = CascadeClassifier(self.haar_file)
         return self
-    
+
     def __exit__(self, exception_type, exception_value, traceback):
         logging.getLogger(__name__).error("*EXIT invoked type:{} value:{}".format(exception_type, exception_value))
-        True
-        
+        return True  # do not re-raise the exception.
+
     def bts_to_img(self, bts):
         buff = np.fromstring(bts, np.uint8)
         buff = buff.reshape(1, -1)
         img = imdecode(buff, IMREAD_COLOR)
         return img
-        
+
     def convertToRGB(self, image):
         return cvtColor(image, COLOR_BGR2RGB)
-      
+
     def __call__(self, _tuple):
         """ The processing
 
         Args:
-            _tuple: process the img_string f9eld
+            _tuple: process the image_string f9eld
 
         Returns:
             faces_regions added to tuple None on failure
@@ -99,22 +105,22 @@ class FaceRegions:
         if self.haar_cascade_face is None:
             self.haar_cascade_face = CascadeClassifier(self.haar_file)
 
-        bio = io.BytesIO(base64.b64decode(_tuple['img_string']))
+        bio = io.BytesIO(base64.b64decode(_tuple['image_string']))
         img_raw = self.bts_to_img(bio.read())
         if img_raw is None:
             img_url = _tuple['img_desc'][0]['img']
             logging.getLogger(__name__).warning("Fail bts_to_img() on url: {}".format(img_url))
             return None
-        print("Size of image to process : ",img_raw.shape)
+        print("Size of image to process : ", img_raw.shape)
         img_rgb = self.convertToRGB(img_raw)
-        face_rects = self.haar_cascade_face.detectMultiScale(img_rgb, scaleFactor = 1.2, minNeighbors = 5)
+        face_rects = self.haar_cascade_face.detectMultiScale(img_rgb, scaleFactor=1.2, minNeighbors=5)
         if len(face_rects) is 0:
             return None
         _tuple['face_regions'] = face_rects.tolist()
         return _tuple
 
-class ObjectRegions:
 
+class ObjectRegions:
 
     def __init__(self, classes="None", weights="/etc/yolov3.weights", config="/etc/yolov3.cfg", on_streams=True):
         """Locate objects(s) in and image, item and location.
@@ -142,7 +148,7 @@ class ObjectRegions:
 
     def __exit__(self, exception_type, exception_value, traceback):
         logging.getLogger(__name__).error("*EXIT invoked type:{} value:{}".format(exception_type, exception_value))
-        True
+        return True  # do not re-raise the exception....
 
     def bts_to_img(self, bts):
         buff = np.fromstring(bts, np.uint8)
@@ -159,10 +165,10 @@ class ObjectRegions:
             - output results must be json compliant
 
         """
-        bio = io.BytesIO(base64.b64decode(_tuple['img_string']))
+        bio = io.BytesIO(base64.b64decode(_tuple['image_string']))
         img_raw = self.bts_to_img(bio.read())
-        #def yolo_detect(frame,conf_threshold):
-        blob = cv2.dnn.blobFromImage(img_raw, self.scale, (416,416), (0,0,0), True, crop=False)
+        # def yolo_detect(frame,conf_threshold):
+        blob = cv2.dnn.blobFromImage(img_raw, self.scale, (416, 416), (0, 0, 0), True, crop=False)
         self.net.setInput(blob)
         layer_names = self.net.getLayerNames()
         output_layers = [layer_names[i[0] - 1] for i in self.net.getUnconnectedOutLayers()]
@@ -189,9 +195,53 @@ class ObjectRegions:
 
         if len(class_ids) == 0:
             return None
-        regions = [{"class":self.classes[class_ids[idx]], "confidence":confidences[idx],"region":boxes[idx] } for idx in range(len(class_ids))]
+        regions = [{"class": self.classes[class_ids[idx]], "confidence": confidences[idx], "region": boxes[idx]} for idx
+                   in range(len(class_ids))]
         _tuple['object_regions'] = regions
-        return(_tuple)
+        return (_tuple)
 
 
+class BuildVideoFrame:
+    def __init__(self):
+        """Image frames come across in chunks the put the chunks back together """
 
+    def decode_img(image_string):
+        """ convert an string to image"""
+        img = Image.open(io.BytesIO(base64.b64decode(image_string)))
+        return img
+
+    def __enter__(self):
+        self.startup = True
+        self.image_string = ""
+
+    def __exit__(self, exception_type, exception_value, traceback):
+        logging.getLogger(__name__).error("* EXIT invoked type:{} value:{}".format(exception_type, exception_value))
+        return True   # do not re-raise the exception
+
+    def __call__(self, chunk):
+        """When starting need to synchronize to the beginning of the chunk.
+           Subsequently, rely on the Kafka to delivery messages order, which may be naive;
+           their is a enough data in the message to build image correctly.
+        """
+        # chunk = json.loads(msg[6])
+        if self.startup:
+            if chunk['chunk_idx'] != 0:
+                self.startup = False
+
+        if chunk['chunk_idx'] == 0:
+            # start of a new frame.
+            self.image_string = chunk['data']
+            return None
+
+        if chunk['chunk_idx'] == chunk['chunk_total']:
+            # frame complete - build tuple, with image_string return
+            # image = self.decode_img(self.image_string)
+            img = "{}@{}".format(chunk['video'],chunk['frame'])
+            img_desc = [{'img':img, 'video':chunk['video'], 'frame':chunk['frame']}]
+            tuple = {'source':'kafka', 'image_string': self.image_string, 'img_desc':img_desc, 'timestamp': chunk['timestamp']}
+            self.image_string = ""
+            return tuple
+
+        # building up frame
+        self.image_string = "".join([self.image_string, chunk['data']])
+        return None

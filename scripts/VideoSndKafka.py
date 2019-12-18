@@ -151,11 +151,11 @@ url = ['https://www.sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.m
 'https://ia801309.us.archive.org/12/items/ISS-Tours/ISS-Tour_Flight-day-highlights_DI_2015_007_1256_220882.mp4',
 'https://ia802705.us.archive.org/14/items/KarlFriedrichDraisTheBicycle/Karl%20Friedrich%20Drais%20The%20Bicycle.mp4'
 ]
-SELECTED_VIDEO=3
+SELECTED_VIDEO=5
 TOPIC="VideoFrame"
 if __name__ == '__main__':
     creds = json.loads(credential.magsEventStream)
     prod = kafka_producer(creds,)
-    video_kafka(url[SELECTED_VIDEO], prod,  kafka_topic=TOPIC, frame_modulo=96)
+    video_kafka(url[SELECTED_VIDEO], prod,  kafka_topic=TOPIC, send_wait=3, frame_modulo=500)
 
     prod.close()
