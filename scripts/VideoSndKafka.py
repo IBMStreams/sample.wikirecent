@@ -156,6 +156,6 @@ TOPIC="VideoFrame"
 if __name__ == '__main__':
     creds = json.loads(credential.magsEventStream)
     prod = kafka_producer(creds,)
-    video_kafka(url[SELECTED_VIDEO], prod,  kafka_topic=TOPIC, send_wait=3, frame_modulo=500)
+    video_kafka(url[SELECTED_VIDEO], prod,  kafka_topic=TOPIC, send_wait=3, frame_modulo=24)
 
     prod.close()
