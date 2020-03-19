@@ -31,6 +31,20 @@ from streamsx.topology import context
 from streamsx.topology.schema import CommonSchema
 from streamsx.eventstreams.schema import Schema
 
+## TODO replace for streams_aid
+def catchInterrupt(func):
+    """decorator : when interupt occurs the display is lost if you don't catch it
+       TODO * <view>.stop_data_fetch()  # stop
+
+    """
+
+    def catch_interrupt(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except (KeyboardInterrupt):
+            pass
+
+    return catch_interrupt
 
 def get_instance(cfg, service_name="Steaming3Turbine"):
     """Setup to access your Streams instance.
@@ -115,7 +129,7 @@ except KeyError as err:
 
 
 
-
+## TODO streams_aid
 def find_job(instance, job_name=None):
     """locate job within instance"""
     for job in instance.get_jobs():
@@ -124,7 +138,7 @@ def find_job(instance, job_name=None):
     else:
         return None
 
-
+## TODO streams_aid
 def display_views(instance, job_name):
     """Locate/promote and display all views of a job"""
     job = find_job(instance, job_name=job_name)
@@ -134,7 +148,7 @@ def display_views(instance, job_name):
         views = job.get_views()
         view_events(views)
 
-
+## TODO streams_aid
 def list_jobs(_instance=None, cancel=False):
     """
     Interactive selection of jobs to cancel.
@@ -184,7 +198,7 @@ def display_view_stop(eventView, period=2):
         b.description = "Stopped"
 
     button.on_click(on_button_clicked)
-
+# TODO moved to streams_aid()
 def view_events(views):
     """
     Build interface to display a list of views and

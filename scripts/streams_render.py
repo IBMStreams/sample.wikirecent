@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 from IPython.display import display, clear_output
 from ipywidgets import HBox, Layout
 
-
+# TODO move to streams_aid
 def catchInterrupt(func):
     """decorator : when interupt occurs the display is lost if you don't catch it
        TODO * <view>.stop_data_fetch()  # stop
@@ -27,7 +27,7 @@ def catchInterrupt(func):
     return catch_interrupt
 
 
-#
+# TODO move to streams_aid
 # Support for locating/rendering views.
 def display_view_stop(eventView, period=2):
     """Wrapper for streamsx.rest_primitives.View.display() to have button. """
@@ -41,7 +41,7 @@ def display_view_stop(eventView, period=2):
 
     button.on_click(on_button_clicked)
 
-
+# TODO move to streams_aid
 def view_events(views):
     """
     Build interface to display a list of views and
@@ -68,6 +68,7 @@ def view_events(views):
     display(select)
 
 
+# TODO move to streams_aid
 def find_job(instance, job_name=None):
     """locate job within instance"""
     for job in instance.get_jobs():
@@ -76,7 +77,7 @@ def find_job(instance, job_name=None):
     else:
         return None
 
-
+# TODO move to streams_aid
 def display_views(instance, job_name):
     """Locate/promote and display all views of a job"""
     job = find_job(instance, job_name=job_name)
@@ -86,7 +87,7 @@ def display_views(instance, job_name):
         views = job.get_views()
         view_events(views)
 
-
+# TODO move to streams_aid
 def list_jobs(_instance=None, cancel=False):
     """
     Interactive selection of jobs to cancel.
