@@ -5,6 +5,10 @@ Collection of functions to assist in rendering of the view data in Notebook.
 
 import base64
 import io
+import time
+import threading
+from PIL import Image,  ImageDraw  # https://pillow.readthedocs.io/en/4.3.x/
+import requests  # http://docs.python-requests.org/en/master/
 
 import ipywidgets as widgets
 import matplotlib.pyplot as plt
@@ -154,23 +158,56 @@ def render_image(image_url=None, output_region=None):
                 ))
             output_region.clear_output(wait=True)
 
-### Rendering support - for 4
+"""
+Rendering image support within a thread.
 
-from PIL import Image,  ImageDraw  # https://pillow.readthedocs.io/en/4.3.x/
-import requests  # http://docs.python-requests.org/en/master/
+
+"""
+
 def line_box(ele):
-    """build a box with lines."""
-    return (ele[0],ele[1],ele[0],ele[3],ele[2],ele[3],ele[2],ele[1],ele[0],ele[1])
+    (x, y, w, h) = ele
+    return (x, y, x + w, y, x + w, y + h, x, y + h, x, y)
+
+
+def inscribe_rect(bin_image, detection_box, box_line_width=10):
+    """Inscribe box on image
+
+    This is updating the image passed in.
+
+    Args:
+        bin_image : binary image
+        detection_box : region to put box around
+    Return:
+        return image -
+    """
+    draw = ImageDraw.Draw(bin_image)
+    draw.line(line_box(detection_box), fill="yellow", width=box_line_width)
+    return bin_image
+
+
+def encode_img(img):
+    """must be easier way"""
+    with io.BytesIO() as output:
+        img.save(output, format="JPEG")
+        contents = output.getvalue()
+    return base64.b64encode(contents).decode('ascii')
+
+
+def decode_img(bin64):
+    """must be easier way"""
+    img = Image.open(io.BytesIO(base64.b64decode(bin64)))
+    return img
+
 
 def resize_image(bin_image, basewidth=None, baseheight=None):
     """Resize image proportional to the base, make it fit in cell"""
     if basewidth is not None:
-        wpercent = (basewidth/float(bin_image.size[0]))
-        hsize = int((float(bin_image.size[1])*float(wpercent)))
-        return bin_image.resize((basewidth,hsize), Image.ANTIALIAS)
-    wpercent = (baseheight/float(bin_image.size[1]))
-    wsize = int((float(bin_image.size[0])*float(wpercent)))
-    return bin_image.resize((wsize,baseheight), Image.ANTIALIAS)
+        wpercent = (basewidth / float(bin_image.size[0]))
+        hsize = int((float(bin_image.size[1]) * float(wpercent)))
+        return bin_image.resize((basewidth, hsize), Image.ANTIALIAS)
+    wpercent = (baseheight / float(bin_image.size[1]))
+    wsize = int((float(bin_image.size[0]) * float(wpercent)))
+    return bin_image.resize((wsize, baseheight), Image.ANTIALIAS)
 
 # example image url: https://m.media-amazon.com/images/S/aplus-media/vc/6a9569ab-cb8e-46d9-8aea-a7022e58c74a.jpg
 def face_crop(bin_image, detection_box, percent, probability):
@@ -267,19 +304,6 @@ def bar_cell(crops_bar, bar_cells, percentage, probability, emotion, crop_img):
     bar_idx += 1
 
 
-def encode_img(img):
-    """must be easier way"""
-    with io.BytesIO() as output:
-        img.save(output, format="JPEG")
-        contents = output.getvalue()
-    return base64.b64encode(contents).decode('ascii')
-
-
-def decode_img(bin64):
-    """must be easier way"""
-    img = Image.open(io.BytesIO(base64.b64decode(bin64)))
-    return img
-
 
 def render_emotions(emotion_tuples, full_widget, crops_bar, bar_cells):
     """Using view data display the emotion results.
@@ -324,3 +348,138 @@ def render_emotions(emotion_tuples, full_widget, crops_bar, bar_cells):
                  probability,
                  emotion['emotion'],
                  Image.open(io.BytesIO(base64.b64decode(binImg))))
+
+
+
+
+
+class faceDashboard(object):
+    def __init__(self, instance, sleep=2):
+        self.instance = instance
+        self.status = widgets.Label(value="Source", layout={'border': '1px solid green', 'width': '50%'})
+        self.rect = widgets.Output(layout={'border': '1px solid red', 'width': '50%', 'height': '300pt'})
+        self.url = widgets.Label(value="URL", layout={'border': '1px solid green', 'width': '50%'})
+        self.button = widgets.Button(description='', button_style='danger', layout={'width': '25%'}, disabled=True)
+
+        self.dashboard = widgets.VBox([self.status, self.rect, self.url, self.button])
+        # display(self.dashboard)
+        self.time_sleep = sleep
+        self.execute = threading.Event()
+        self.thread = None
+
+    def render_tuples(self, tuples):
+        count = 0
+        num_tuples = len(tuples)
+        self.status.value = "view dequed:{} @ {}".format(num_tuples, time.strftime("%H:%M:%S", time.localtime()))
+        for face in tuples:
+            self.url.value = face['url']
+            # source_face.value = trimmed['source']  # TODO - move accros the source.
+            self.status.value = "{} of {}".format(count, num_tuples)
+            count += 1
+            image_string = face['image_string']
+            with Image.open(io.BytesIO(base64.b64decode(image_string))) as bin_image:
+                for rect in face['face_regions']:
+                    inscribe_rect(bin_image, rect)
+                with self.rect:
+                    display(resize_image(bin_image, baseheight=600))
+                    clear_output(wait=True)
+            time.sleep(self.time_sleep)
+
+    def ignition(self, start):
+        if start:
+            self.thread = threading.Thread(target=self.fetchRender_thread, name="Render_Face")
+            self.thread.start()
+        else:
+            self.execute.clear()
+            self.button.description = "Stopping..."
+            self.button.disabled = True
+
+    def fetchRender_thread(self):
+        self.button.disabled = True
+        self.button.description = 'Stop'
+        self.button.button_style = 'danger'
+        button_action = lambda w: self.ignition(False)
+        self.button.on_click(button_action)
+        self.button.disabled = False
+        self.execute.set()
+
+        # start up
+        faces_view = self.instance.get_views(name="faces_view")[0]
+        faces_view.start_data_fetch()
+        # fetch til button pushed
+        while self.execute.is_set():
+            faces_tuples = faces_view.fetch_tuples(max_tuples=10, timeout=2)
+            self.render_tuples(faces_tuples)
+        # shut down
+        faces_view.stop_data_fetch()
+        #
+        self.button.description = 'Stopped'
+        self.button.button_style = 'warning'
+
+
+# Convert to rendering in thread..
+
+class objectDashboard(object):
+    def __init__(self, instance, sleep=2):
+        self.instance = instance
+        self.source = widgets.Label(value="Source", layout={'border': '1px solid green', 'width': '50%'})
+        self.rect = widgets.Output(layout={'border': '1px solid red', 'width': '50%', 'height': '300pt'})
+        self.url = widgets.Label(value="URL", layout={'border': '1px solid green', 'width': '50%'})
+        self._class = widgets.Label(value="CLASS", layout={'border': '1px solid green', 'width': '50%'})
+        self.button = widgets.Button(description='', button_style='danger', layout={'width': '25%'}, disabled=True)
+        self.dashboard = widgets.VBox([self.source, self.rect, self.url, self.button, self._class])
+        self.time_sleep = sleep
+        self.execute = threading.Event()
+        self.thread = None
+
+    def render_tuples(self, tuples):
+        count = 0
+        self.source.value = "view dequed:{} @ {}".format(len(tuples), time.strftime("%H:%M:%S", time.localtime()))
+        for tuple_object in tuples:
+            self.url.value = tuple_object['url']
+            self.source.value = "{} of {}".format(count, len(tuples))
+            count += 1
+            image_string = tuple_object['image_string']
+            class_string = ""
+            with Image.open(io.BytesIO(base64.b64decode(image_string))) as bin_image:
+                for rect in tuple_object['object_regions']:
+                    inscribe_rect(bin_image, rect['region'])
+                    class_string = ",".join([class_string, rect['class']])
+                    self._class.value = class_string
+                with self.rect:
+                    display(resize_image(bin_image, baseheight=600))
+                    clear_output(wait=True)
+            if not self.execute.is_set():
+                break
+            time.sleep(self.time_sleep)
+
+    def ignition(self, start):
+        if start:
+            self.thread = threading.Thread(target=self.fetchRender_thread, name="Render_View")
+            self.thread.start()
+        else:
+            self.execute.clear()
+            self.button.description = "Stopping..."
+            self.button.disabled = True
+
+    def fetchRender_thread(self):
+        self.button.disabled = True
+        self.button.description = 'Stop'
+        self.button.button_style = 'danger'
+        button_action = lambda w: self.ignition(False)
+        self.button.on_click(button_action)
+        self.button.disabled = False
+        self.execute.set()
+
+        # start up
+        objects_view = self.instance.get_views(name="objects_view")[0]
+        objects_view.start_data_fetch()
+        # fetch til button pushed
+        while self.execute.is_set():
+            objects_tuples = objects_view.fetch_tuples(max_tuples=100, timeout=2)
+            self.render_tuples(objects_tuples)
+        # shut down
+        objects_view.stop_data_fetch()
+        #
+        self.button.description = 'Stopped'
+        self.button.button_style = 'warning'

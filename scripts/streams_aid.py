@@ -217,7 +217,7 @@ def get_instance(service_name="Steaming3Turbine"):
         cfg = None
         print("Outside ICP4D")
         import credential
-        sc = rest.StreamingAnalyticsConnection(service_name='Streaming3Turbine',
+        sc = rest.StreamingAnalyticsConnection(service_name=service_name,
                                                vcap_services=credential.vcap_conf)
         instance = sc.get_instances()[0]
     return instance,cfg
