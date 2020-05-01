@@ -16,6 +16,8 @@ import numpy as np
 import requests
 from IPython.display import clear_output
 from PIL import Image
+import kafka
+
 
 import matplotlib.pyplot as plt
 import ipywidgets as widgets
