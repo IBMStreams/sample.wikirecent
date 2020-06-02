@@ -1,0 +1,5 @@
+What is here:
+    - Smoke test files
+    - Explorations
+
+Files that I may harvest from while organizing.
