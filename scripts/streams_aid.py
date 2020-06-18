@@ -92,6 +92,8 @@ def get_view(instance, job_name=None, view_name="view"):
 
 
 def display_views(instance, job_name):
+    # type: (object, object) -> object
+    # type: (object, object) -> object
     """Locate/promote and display all views of a job"""
     job = find_job(instance, job_name=job_name)
     if job is None:

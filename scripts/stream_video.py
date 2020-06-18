@@ -133,7 +133,7 @@ def fetch_frames(segment, frame_modulo=24, process_frame=show_frame):
 
 def display_frame(segment) -> list:
     """Display 1 frame of the segment
-    :return: list if images, one for now.
+    :return: list if images, one for now. if Error, empty list
 
     - segment portion is a .ts file, read from the web.
     - A segment is composed of multiple frames.
@@ -141,9 +141,9 @@ def display_frame(segment) -> list:
 
     """
     frame = None
-    cap = cv2.VideoCapture(segment['segment'])
-    if (cap.isOpened()):
-        ret, frame = cap.read()
+    capture = cv2.VideoCapture(segment['segment'])
+    if capture.isOpened():
+        ret, frame = capture.read()
         if ret is False:
             print("Failed to read frame....")
             return [frame]
@@ -154,6 +154,7 @@ def display_frame(segment) -> list:
         plt.show()
     else:
         print("Open failed....")
+        return []
     return [frame]
 
 
@@ -212,16 +213,21 @@ def collect_frames(chunk_url, count=5):
 
 
 def crop_frame(frame, crop_specification):
-    """crop a frame"""
-    region_of_interest = (crop_specification.size[0],
-                          crop_specification.size[1],
-                          crop_specification.size[0] + crop_specification.size[2],
-                          crop_specification.size[1] + crop_specification.size[3])
-    orginal_encoded = encode_img(Image.fromarray(frame, 'RGB'))
-    img_raw = decode_img(orginal_encoded)
-    cropped = img_raw.crop(region_of_interest)
-    image_encoded = encode_img(cropped)
+    """encode and maybe crop frame """
+    if crop_specification is not None:
+        region_of_interest = (crop_specification.size[0],
+                              crop_specification.size[1],
+                              crop_specification.size[0] + crop_specification.size[2],
+                              crop_specification.size[1] + crop_specification.size[3])
+        orginal_encoded = encode_img(Image.fromarray(frame, 'RGB'))
+        img_raw = decode_img(orginal_encoded)
+        cropped = img_raw.crop(region_of_interest)
+        image_encoded = encode_img(cropped)
+    else:
+        image_encoded = encode_img(Image.fromarray(frame, 'RGB'))
     return image_encoded
+
+
 
 
 def collected_frames(crop_frames, shape):
@@ -308,13 +314,14 @@ class streamCroppedVideo():
                 shape : value returned from cropping tool, region of image to be cropped
                 wait_time : seconds to wait between getting chunks
                 frame_modulo : send ever # frame of a chunk set
+                kafka_producer : class that sends video frame components.
             Notes:
                 - live sites serve up data in chunks, keep fetching the same file it's contents change
                 - .u3
                 - .ts : file has chunk of video
+                - If the modulo is too long the UI cannot keep up and things get wonky, 2 has issue, 16 seems ok
 
         """
-
 
         self.cams_chunk_url = cams_chunk_url
         self.cams_base = extract_base(cams_chunk_url)
@@ -324,7 +331,7 @@ class streamCroppedVideo():
         self.kafka_prod = kafka_producer
         self.kafka_topic = kafka_topic
         self.active_segment = None
-        ## setup dashboaard
+        # setup dashboaard
         self.stream_action = widgets.Label(layout={'border': '1px solid green', 'width': '61%'})
         self.stream_widget = widgets.Output(layout={'border': '1px solid red', 'width': '61%', 'height': '270pt'})
         self.stream_status = widgets.Label(layout={'border': '1px solid green', 'width': '61%'})
@@ -350,57 +357,18 @@ class streamCroppedVideo():
         self.stop = True
 
     def transmit_clicked(self, b):
+        self.transmit_button.disabled = True
         if self.transmit:
             self.transmit = False
-            self.stream_action.value = "transmit stopping"
+            self.stream_action.value = "transmit stopped at: {}".format(self.transmit_count)
             self.transmit_button.description = "Transmit * Start"
         else:
             self.transmit = True
-            self.stream_action.value = "transmit countinue : {}".format(self.transmit_count)
+            self.stream_action.value = "transmit continue at: {}".format(self.transmit_count)
             self.transmit_button.description = "Transmit * Stop"
+        self.transmit_button.disabled = False
 
-    def frame_crop_display(self, frame):
-        """crop frame and display
 
-        Returns:  encoded image that can be sent to streams
-        Notes:
-             * crop region is shape
-        """
-        cropped_encoded_image = frame
-        if self.shape is not None:
-            cropped_encoded_image = crop_frame(frame, self.shape)
-        with self.stream_widget:
-            display(decode_img(cropped_encoded_image))
-            clear_output(wait=True)
-        return cropped_encoded_image
-
-    def fetch_frames(self, segment, frame_modulo=24, process_frame=None):
-        """fetch frames and process them
-        Args:
-            segment['segment] : url (*.ts) of video segment
-            process_frame : function that processes the fetched frame,
-                            this.frame_crop_display(), stream.show_frame()
-        Notes:
-            * process_thread is interesting but maybe too 'cute'
-    """
-        cap = cv2.VideoCapture(segment['segment'])
-        count = 0
-        frames = list()
-        image_encoded_frames = list()
-        if (cap.isOpened()):
-            while True:
-                ret, frame = cap.read()
-                if ret is False:
-                    if self.stream_status is not None: self.stream_status.value = "ENDFrame @ {}".format(count)
-                    return frames, image_encoded_frames
-                if count % frame_modulo == 0:
-                    frames.append(frame)
-                    image_encoded_frames.append(process_frame(frame))
-
-                count += 1
-        else:
-            print("Open failed....")
-        return frames, image_encoded_frames
 
     def send_encoded_image(self, image_encoded, CHUNK_SIZE=100000):
         """send one encoded frame via kafka
@@ -434,14 +402,62 @@ class streamCroppedVideo():
         logging.info("Transmit frame #{}".format(chunk_content["frame"]))
         self.kafka_prod.send(self.kafka_topic, value=json.dumps(chunk_complete).encode('utf-8'))
 
-    def kafka_frames(self, image_encoded_frames):
-        """send a list of frames"""
+
+    def kafka_frame(self, image_encoded_frame):
+        """send a frame conditionally"""
         if self.transmit:
             self.stream_action.value = "send"
-            self.transmit_count += len(image_encoded_frames)
+            self.transmit_count += 1
             self.stream_status.value = "transmit count : {}".format(self.transmit_count)
-            for image_encoded in image_encoded_frames:
-                self.send_encoded_image(image_encoded)
+            self.send_encoded_image(image_encoded_frame)
+
+
+    def frame_crop_display(self, frame):
+        """crop frame if defined and display
+        Args:
+            frame : frame to be processed
+        Returns:  encoded image that can be sent to streams
+        Notes:
+             * crop region is shape
+        """
+        encoded_image = crop_frame(frame, self.shape)
+        with self.stream_widget:
+            display(decode_img(encoded_image))
+            clear_output(wait=True)
+        return encoded_image
+
+    def fetch_frames(self, segment):
+        """fetch frames and process each one that falls on modulo
+        Args:
+            segment['segment] : url (*.ts) of video segment
+
+        Notes:
+            * fetch the frames
+            * crop
+            * render
+            * transmit
+    """
+        cap = cv2.VideoCapture(segment['segment'])
+        count = 0
+        frames = list()
+        image_encoded_frames = list()
+        if (cap.isOpened()):
+            while not self.stop:
+                ret, frame = cap.read()
+                if ret is False:
+                    if self.stream_status is not None: self.stream_status.value = "ENDFrame @ {}".format(count)
+                    return frames, image_encoded_frames
+                if count % self.frame_modulo == 0:
+                    frames.append(frame)
+                    encoded_frame = self.frame_crop_display(frame)
+                    image_encoded_frames.append(encoded_frame)
+                    self.kafka_frame(encoded_frame)
+
+                count += 1
+        else:
+            print("Open failed....")
+        return frames, image_encoded_frames
+
 
     def fetchFrames_thread(self):
         """thread : fetch, display frames optionally send out via kafka
@@ -464,16 +480,14 @@ class streamCroppedVideo():
             time.sleep(self.wait_time)
             for segment in segments:
                 self.active_segment = segment
-                if self.stop is True: break
+                if not self.execute.is_set(): break
                 if segment not in self.displayed_segment:
-                    self.stream_action.value = "{} secs of frames in : {}".format(segment['secs'], segment['segment'])
-                    frames, image_encoded_frames = self.fetch_frames(segment, process_frame=self.frame_crop_display,
-                                                                     frame_modulo=self.frame_modulo)
-                    self.stream_status.value = "Fetched ... {} frames.".format(len(frames))
-                    self.kafka_frames(image_encoded_frames)
+                    self.stream_action.value = "{} secs : {}".format(segment['secs'], segment['segment'][20:])
+                    frames, image_encoded_frames = self.fetch_frames(segment)
+                    self.stream_status.value = "Fetched ... {} from {}.".format(len(frames), segment['segment'][20:])
                     self.displayed_segment.append(segment)
                 else:
-                    self.stream_status.value = "skip segment:{}".format(segment)
+                    self.stream_status.value = "skip segment:{}".format(segment['segment'][20:])
 
         self.stop_button.description = "Stopped"
 
